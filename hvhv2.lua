@@ -57,53 +57,129 @@ local FOV = Drawing.new("Circle")
 FOV.Thickness,FOV.NumSides,FOV.Radius = 2,100,120
 FOV.Color,FOV.Visible,FOV.Filled,FOV.Transparency = Color3.new(1,1,1),false,false,0.7
 
+
 -- ESP
 local ESPCache = {}
 function MakeESP(p)
     if p==LP or ESPCache[p] then return end
-    ESPCache[p] = {
-        N=Drawing.new("Text"),D=Drawing.new("Text"),B=Drawing.new("Square"),
-        T=Drawing.new("Line"),HBG=Drawing.new("Square"),HB=Drawing.new("Square")
-    }
-    for _,v in pairs(ESPCache[p]) do
-        if v.Center then v.Center,v.Outline,v.Font=true,true,2 end
-        if v.Thickness then v.Thickness=v==ESPCache[p].B and 2 or 1.5 end
-        if v.Filled then v.Filled=true end
+    
+    -- Protect Drawing creation with pcall
+    local success, err = pcall(function()
+        ESPCache[p] = {
+            N=Drawing.new("Text"),
+            D=Drawing.new("Text"),
+            B=Drawing.new("Square"),
+            T=Drawing.new("Line"),
+            HBG=Drawing.new("Square"),
+            HB=Drawing.new("Square")
+        }
+        
+        for _,v in pairs(ESPCache[p]) do
+            if v.Center then 
+                v.Center=true
+                v.Outline=true
+                v.Font=2 
+            end
+            if v.Thickness then 
+                v.Thickness=v==ESPCache[p].B and 2 or 1.5 
+            end
+            if v.Filled and v~=ESPCache[p].B then 
+                v.Filled=true 
+            end
+        end
+    end)
+    
+    if not success then
+        warn("Failed to create ESP for "..p.Name..": "..tostring(err))
+        ESPCache[p] = nil
     end
 end
 
 function UpdESP()
     for p,e in pairs(ESPCache) do
-        if not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
-            for _,v in pairs(e) do v.Visible=false end continue
+        -- Check if ESP objects exist
+        if not e or not e.N then 
+            ESPCache[p] = nil
+            continue 
         end
+        
+        if not p.Character or not p.Character:FindFirstChild("HumanoidRootPart") then
+            pcall(function()
+                for _,v in pairs(e) do v.Visible=false end
+            end)
+            continue
+        end
+        
         local ch,hr,hu=p.Character,p.Character.HumanoidRootPart,p.Character.Humanoid
         local pos,on=Cam:WorldToViewportPoint(hr.Position)
         local dist=(hr.Position-Cam.CFrame.Position).Magnitude
+        
         if not C.ESP.On or not on or dist>C.ESP.Max or (C.ESP.Team and p.Team==LP.Team) then
-            for _,v in pairs(e) do v.Visible=false end continue
+            pcall(function()
+                for _,v in pairs(e) do v.Visible=false end
+            end)
+            continue
         end
         
-        if C.ESP.Name then e.N.Text,e.N.Position,e.N.Color,e.N.Size,e.N.Visible=p.Name,Vector2.new(pos.X,pos.Y-35),C.ESP.NCol,15,true else e.N.Visible=false end
-        if C.ESP.Dist then e.D.Text,e.D.Position,e.D.Color,e.D.Size,e.D.Visible=math.floor(dist).."m",Vector2.new(pos.X,pos.Y+15),C.ESP.DCol,13,true else e.D.Visible=false end
-        
-        if C.ESP.Box and ch:FindFirstChild("Head") then
-            local hp,lp=Cam:WorldToViewportPoint(ch.Head.Position+Vector3.new(0,0.5,0)),Cam:WorldToViewportPoint(hr.Position-Vector3.new(0,3,0))
-            local h,w=math.abs(hp.Y-lp.Y),math.abs(hp.Y-lp.Y)*0.5
-            e.B.Size,e.B.Position,e.B.Color,e.B.Filled,e.B.Visible=Vector2.new(w,h),Vector2.new(pos.X-w/2,hp.Y),C.ESP.BCol,C.ESP.Fill,true
-        else e.B.Visible=false end
-        
-        if C.ESP.Trace then
-            local o=C.ESP.TFrom=="Bottom" and Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y) or Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
-            e.T.From,e.T.To,e.T.Color,e.T.Visible=o,Vector2.new(pos.X,pos.Y),C.ESP.TCol,true
-        else e.T.Visible=false end
-        
-        if C.ESP.HP and ch:FindFirstChild("Head") then
-            local hp,lp=Cam:WorldToViewportPoint(ch.Head.Position+Vector3.new(0,0.5,0)),Cam:WorldToViewportPoint(hr.Position-Vector3.new(0,3,0))
-            local h,w,hp_pct=math.abs(hp.Y-lp.Y),math.abs(hp.Y-lp.Y)*0.5,hu.Health/hu.MaxHealth
-            e.HBG.Size,e.HBG.Position,e.HBG.Color,e.HBG.Visible=Vector2.new(3,h),Vector2.new(pos.X-w/2-6,hp.Y),Color3.new(0,0,0),true
-            e.HB.Size,e.HB.Position,e.HB.Color,e.HB.Visible=Vector2.new(3,h*hp_pct),Vector2.new(pos.X-w/2-6,hp.Y+(h*(1-hp_pct))),Color3.new(1-hp_pct,hp_pct,0),true
-        else e.HBG.Visible,e.HB.Visible=false,false end
+        pcall(function()
+            if C.ESP.Name then 
+                e.N.Text=p.Name
+                e.N.Position=Vector2.new(pos.X,pos.Y-35)
+                e.N.Color=C.ESP.NCol
+                e.N.Size=15
+                e.N.Visible=true 
+            else 
+                e.N.Visible=false 
+            end
+            
+            if C.ESP.Dist then 
+                e.D.Text=math.floor(dist).."m"
+                e.D.Position=Vector2.new(pos.X,pos.Y+15)
+                e.D.Color=C.ESP.DCol
+                e.D.Size=13
+                e.D.Visible=true 
+            else 
+                e.D.Visible=false 
+            end
+            
+            if C.ESP.Box and ch:FindFirstChild("Head") then
+                local hp,lp=Cam:WorldToViewportPoint(ch.Head.Position+Vector3.new(0,0.5,0)),Cam:WorldToViewportPoint(hr.Position-Vector3.new(0,3,0))
+                local h,w=math.abs(hp.Y-lp.Y),math.abs(hp.Y-lp.Y)*0.5
+                e.B.Size=Vector2.new(w,h)
+                e.B.Position=Vector2.new(pos.X-w/2,hp.Y)
+                e.B.Color=C.ESP.BCol
+                e.B.Filled=C.ESP.Fill
+                e.B.Visible=true
+            else 
+                e.B.Visible=false 
+            end
+            
+            if C.ESP.Trace then
+                local o=C.ESP.TFrom=="Bottom" and Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y) or Vector2.new(Cam.ViewportSize.X/2,Cam.ViewportSize.Y/2)
+                e.T.From=o
+                e.T.To=Vector2.new(pos.X,pos.Y)
+                e.T.Color=C.ESP.TCol
+                e.T.Visible=true
+            else 
+                e.T.Visible=false 
+            end
+            
+            if C.ESP.HP and ch:FindFirstChild("Head") then
+                local hp,lp=Cam:WorldToViewportPoint(ch.Head.Position+Vector3.new(0,0.5,0)),Cam:WorldToViewportPoint(hr.Position-Vector3.new(0,3,0))
+                local h,w,hp_pct=math.abs(hp.Y-lp.Y),math.abs(hp.Y-lp.Y)*0.5,hu.Health/hu.MaxHealth
+                e.HBG.Size=Vector2.new(3,h)
+                e.HBG.Position=Vector2.new(pos.X-w/2-6,hp.Y)
+                e.HBG.Color=Color3.new(0,0,0)
+                e.HBG.Visible=true
+                e.HB.Size=Vector2.new(3,h*hp_pct)
+                e.HB.Position=Vector2.new(pos.X-w/2-6,hp.Y+(h*(1-hp_pct)))
+                e.HB.Color=Color3.new(1-hp_pct,hp_pct,0)
+                e.HB.Visible=true
+            else 
+                e.HBG.Visible=false
+                e.HB.Visible=false 
+            end
+        end)
     end
 end
 
