@@ -28,7 +28,7 @@ end)
 
 setreadonly(mt, true)
 
--- Config (Oxygen handles saving.  Initial default values)  
+-- Config (Oxygen handles saving. Initial default values)  
 local Config = {  
 SilentAim = false,  
 SilentFOV = 120,  
@@ -112,9 +112,7 @@ Camera.CameraType = Enum.CameraType.Scriptable
 local character = LocalPlayer.Character  
 if character and character:FindFirstChild("HumanoidRootPart") then  
 local headCFrame = character.HumanoidRootPart.CFrame * CFrame.new(0, 2, 0)  
-Camera.CFrame = headCFrame  
--- Add smoothness here.  Lerp the Camera.CFrame towards headCFrame over time.  
--- Example: Camera.CFrame = Camera.CFrame:Lerp(headCFrame, camlockSmoothness)  
+Camera.CFrame = headCFrame:Lerp(Camera.CFrame, camlockSmoothness) --Smoothness  
 end  
 else  
 Camera.CameraType = Enum.CameraType.Custom  
@@ -128,24 +126,36 @@ local function Fly()
 if flyEnabled then  
 LocalPlayer.Character.Humanoid.WalkSpeed = 50  
 LocalPlayer.Character.Humanoid.JumpPower = 100  
-UserInputService.SetEnumParameter("Enum.KeyCode.Space", "Jump", false)  
-LocalPlayer.Character.Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)  
+LocalPlayer.Character.Humanoid.PlatformStand = true --Prevent falling through the floor  
+UserInputService.SetEnumParameter("Enum.KeyCode.Space", "Jump", false) --Disable jumping  
 else  
 LocalPlayer.Character.Humanoid.WalkSpeed = 16  
 LocalPlayer.Character.Humanoid.JumpPower = 50  
+LocalPlayer.Character.Humanoid.PlatformStand = false  
 UserInputService.SetEnumParameter("Enum.KeyCode.Space", "Jump", true)  
 end  
 end
 
--- Noclip (Placeholder - Needs collision bypass implementation)  
+-- Noclip (Basic - requires collision bypass)  
 local noclipEnabled = false
 
 local function Noclip()  
 if noclipEnabled then  
---Implement collision bypass here  
-print("Noclip enabled (collision bypass not implemented)")  
+--Turn off collision  
+for i, v in pairs(workspace:GetChildren()) do  
+if v:IsA("BasePart") and v.CanCollide == true then  
+v.CanCollide = false  
+end  
+end  
+print("Noclip enabled")
+
 else  
---Implement normal collision here  
+--Turn on collision  
+for i, v in pairs(workspace:GetChildren()) do  
+if v:IsA("BasePart") and v.CanCollide == false then  
+v.CanCollide = true  
+end  
+end  
 print("Noclip disabled")  
 end  
 end
@@ -200,29 +210,31 @@ if predictedPos then
 local cameraCFrame = Camera.CFrame  
 local newCFrame = CFrame.lookAt(cameraCFrame.Position, predictedPos)  
 Camera.CFrame = newCFrame  
-task.wait(0.1) --Adjust Timing  
-Camera.CFrame = cameraCFrame --Restore original camera  
+task.wait(0.05)  
+Camera.CFrame = cameraCFrame  
 end  
 end  
 end  
 end  
 end)
 
--- TriggerBot Backend (Placeholder - Needs more robust implementation)  
+-- TriggerBot (Basic)  
 local function StartTriggerBot()  
 if Config.TriggerBot then  
---Implement triggerbot logic here  
-print ("Trigger Bot activated")  
+-- Implement triggerbot logic here  
+print("Triggerbot activated")  
 end  
 end
 
 -- Toggle GUI Keybind  
 UserInputService.InputBegan:Connect(function(input, gameProcessed)  
 if input.KeyCode == Config.ToggleKey and not gameProcessed then  
---Toggle camlock, fly and noclip  
 camlockEnabled = not camlockEnabled  
 flyEnabled = not flyEnabled  
-noclipEnabled = not noclipEnabled
+noclipEnabled = not noclipEnabled  
+Config.Camlock = camlockEnabled  
+Config.Fly = flyEnabled  
+Config.Noclip = noclipEnabled
 
 Camlock()  
 Fly()  
@@ -231,7 +243,8 @@ end
 end)
 
 -- Connections and Startup  
-RunService.Heartbeat:Connect(UpdateESP)
+RunService.Heartbeat:Connect(UpdateESP)  
+RunService.Heartbeat:Connect(Camlock)
 
 Players.PlayerAdded:Connect(function(player)  
 player.CharacterAdded:Connect(function()  
