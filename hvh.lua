@@ -136,20 +136,24 @@ local function PredictPosition(target)
     return prediction
 end
 
--- Hook GetMouseHit for Silent Aim
-local oldGetMouseHit = Camera.GetMouseHit
-Camera.GetMouseHit = function(self)
-    if Config.SilentAim and Players.LocalPlayer.Character then
-        local target = GetClosestPlayer()
-        if target then
-            local predictedPos = PredictPosition(target)
-            if predictedPos then
-                return CFrame.new(predictedPos)
+-- Hook UserInputService for Silent Aim
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 and not gameProcessed then
+        if Config.SilentAim then
+            local target = GetClosestPlayer()
+            if target then
+                local predictedPos = PredictPosition(target)
+                if predictedPos then
+                    local cameraCFrame = Camera.CFrame
+                    local newCFrame = CFrame.lookAt(cameraCFrame.Position, predictedPos)
+                    Camera.CFrame = newCFrame
+                    task.wait(0.1)
+                    Camera.CFrame = cameraCFrame
+                end
             end
         end
     end
-    return oldGetMouseHit(self)
-end
+end)
 
 -- Anti-Aim Backend
 local AntiAimConnection
