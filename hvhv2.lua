@@ -1,9 +1,3 @@
---[[
-@more-more-more made this
-@description a simple roblox cheat
-@date 12/16/2025
-]]--
-
 local Players = game:GetService("Players")  
 local RunService = game:GetService("RunService")  
 local UserInputService = game:GetService("UserInputService")  
@@ -23,7 +17,7 @@ Camlock = false,
 CamlockSmoothness = 5,  
 Fly = false,  
 Noclip = false,  
-GUIKeybind = "INS"  
+GUIKeybind = "ins"  
 }
 
 local DataStore = DataStoreService:GetDataStore("HVHConfig")
